@@ -1,0 +1,43 @@
+# docker/dev/docker-compose.yml
+services:
+  web:
+    build:
+      context: ../..  # This goes up two levels to reach the project root
+      dockerfile: docker/dev/Dockerfile
+    ports:
+      - "4000:4000"
+    volumes:
+      - ../..:/app  # This goes up two levels to reach the project root
+    environment:
+      - MIX_ENV=dev
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+      - PHX_HOST=0.0.0.0
+      - PORT=${PORT}
+    depends_on:
+      db:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data_dev:
